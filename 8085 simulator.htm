@@ -1,0 +1,282 @@
+<html>
+<head>
+<title>8085 Simulator</title>
+<script src="8085 simulator.js"></script>
+<script src="Binary Data.js"></script>
+<script>
+window.advancedcheck=true;
+function Reverse(x){
+var rev="";
+for(var l=x.length-1;l>=0;--l)
+	rev+=x.charAt(l);
+return rev;
+}
+
+function registerTableVisible(){
+document.getElementById("registerTable").hidden=false;
+document.getElementById("memoryTable").hidden=true;
+document.getElementById("IOTable").hidden=true;
+}
+function memoryTableVisible(){
+document.getElementById("memoryTable").hidden=false;
+document.getElementById("registerTable").hidden=true;
+document.getElementById("IOTable").hidden=true;
+}
+function iodevicesTableVisible(){
+document.getElementById("IOTable").hidden=false;
+document.getElementById("registerTable").hidden=true;
+document.getElementById("memoryTable").hidden=true;
+}
+function allTableVisible(){
+document.getElementById("registerTable").hidden=false;
+document.getElementById("memoryTable").hidden=false;
+document.getElementById("IOTable").hidden=false;
+}
+function toggle(x){
+if(x.innerHTML=="0")
+x.innerHTML="1";
+else x.innerHTML="0";
+}
+function exec(x){
+<!-- var Code=document.getElementById("AssemblyProgram").value.toUpperCase(); -->
+<!-- var Codes=Code.split("\n"); -->
+if(window.advancedcheck)
+if(confirm("You havenot Assembled the program!\nDo you still want to proceed?")==false)
+return;
+if(x==0){
+run(hex_to_dec(document.getElementById("assemble_point").value));
+simulate();
+}
+else {
+Reset();
+PC=hex_to_dec(document.getElementById("assemble_point").value);
+document.getElementById("execution").hidden=true;
+document.getElementById("stepoption").hidden=false;
+window.stepcount=0;
+document.getElementById("lineNo").innerHTML="--";
+document.getElementById("MemAddr").innerHTML="--";
+document.getElementById("Instr").innerHTML="--";
+document.getElementById("Operator").innerHTML="--";
+}
+}
+
+function execstep(){
+window.stepcount++;
+document.getElementById("lineNo").innerHTML=window.stepcount;
+document.getElementById("MemAddr").innerHTML=PC;
+arr=runstep();
+try{if(arr[0])
+finishStep();
+}catch(err){
+alert(err);
+finishStep(1);
+}
+document.getElementById("Instr").innerHTML=instruction;
+oper=arr[1][0];
+for(var i=1,l=arr[1].length;i<l;++i)
+oper+=","+arr[1][i];
+document.getElementById("Operator").innerHTML=oper;
+}
+
+function finishStep(cd=0){
+if(cd==0)
+alert("Finished execution of the program");
+document.getElementById("execution").hidden=false;
+document.getElementById("stepoption").hidden=true;
+}
+
+function simulate(){
+document.getElementById("valueA").innerHTML= A;
+document.getElementById("valueB").innerHTML= B;
+document.getElementById("valueC").innerHTML= C;
+document.getElementById("valueD").innerHTML= D;
+document.getElementById("valueE").innerHTML= E;
+document.getElementById("valueH").innerHTML= H;
+document.getElementById("valueL").innerHTML= L;
+document.getElementById("valueM").innerHTML= M;
+
+for(var i=0;i<8;++i){
+document.getElementById("A"+i).innerHTML= bin_A.charAt(7-i);
+document.getElementById("B"+i).innerHTML= bin_B[7-i];
+document.getElementById("C"+i).innerHTML= bin_C[7-i];
+document.getElementById("D"+i).innerHTML= bin_D[7-i];
+document.getElementById("E"+i).innerHTML= bin_E[7-i];
+document.getElementById("H"+i).innerHTML= bin_H[7-i];
+document.getElementById("L"+i).innerHTML= bin_L[7-i];
+document.getElementById("M"+i).innerHTML= bin_M[7-i];
+}
+
+document.getElementById("flagCY").innerHTML= carry_flag;
+document.getElementById("flagP").innerHTML= parity_flag;
+document.getElementById("flagAC").innerHTML= auxillary_carry_flag;
+document.getElementById("flagZ").innerHTML= zero_flag;
+document.getElementById("flagS").innerHTML= sign_flag;
+document.getElementById("flag").innerHTML= status_flag;
+document.getElementById("PSW").innerHTML=PSW;
+document.getElementById("stackPointer").innerHTML=Stack_pointer;
+
+var ax;
+var ay;
+for(i=0;i<16;++i){
+ay=dec_to_hex(i);
+for(j=0;j<16;++j){
+ax=dec_to_hex(j);
+document.getElementById("io"+ay+ax).innerHTML=getIOMemory(ay+ax);
+}
+}
+setMemoryTable();
+
+document.getElementById("SOD").innerHTML=SOD;
+document.getElementById("SIMSOD").innerHTML=SOD;
+document.getElementById("SID").innerHTML=SID;
+document.getElementById("RIMSID").innerHTML=SID;
+document.getElementById("INTR").innerHTML=INTR;
+document.getElementById("TRAP").innerHTML=TRAP;
+document.getElementById("R7_5").innerHTML=I7_5;
+document.getElementById("R6_5").innerHTML=I6_5;
+document.getElementById("R5_5").innerHTML=I5_5;
+document.getElementById("SIMSDE").innerHTML=SDE;
+document.getElementById("SIMR7_5").innerHTML=R7_5;
+document.getElementById("SIMMSE").innerHTML=MSE;
+document.getElementById("SIMM7_5").innerHTML=M7_5;
+document.getElementById("SIMM6_5").innerHTML=M6_5;
+document.getElementById("SIMM5_5").innerHTML=M5_5;
+document.getElementById("RIM17.5").innerHTML=I7_5;
+document.getElementById("RIM16.5").innerHTML=I6_5;
+document.getElementById("RIM15.5").innerHTML=I5_5;
+document.getElementById("RIMIE").innerHTML=IE;
+document.getElementById("RIMM7.5").innerHTML=M7_5;
+document.getElementById("RIMM6.5").innerHTML=M6_5;
+document.getElementById("RIMM5.5").innerHTML=M5_5;
+}
+function setMemoryTable(){
+var mem="<tr><th>Memory Address</th><th>Value</th></tr>";
+var currAddress;
+var Memor
+for(var i=0;i<65536;++i){
+currAddress=dec_to_hex(i,4);
+Memor=Memory[i];
+if(Memor!=null)
+mem+="<tr><td>"+currAddress+"</td><td>"+Memor+"</td></tr>";
+}
+document.getElementById("selectedMemory").innerHTML=mem;
+}
+
+function strMem(){
+var loc=prompt("Please Enter Memory Location");
+var data;
+if(loc!=null){
+if(loc.length!=4){
+alert("Invalid Memory Location Entered!\nPlease try again.");
+strMem();
+}else{
+do{	data=prompt("Set Value for "+loc);
+	if(data!=null){
+	if(data.length==2){
+	setMemory(""+loc,""+data);
+	break;
+	} else alert("Invalid Data!\nPlease try again.");
+	}
+	}while(data!=null);}
+}
+setMemoryTable();
+}
+
+function clrMem(){
+Memory=new Array(65536);
+setMemoryTable();
+}
+</script>
+<link rel="stylesheet" type="text/css" href="8085 simulator.css">
+</head>
+<body>
+<H1>8085 Simulator</H1>
+Write your Assembly Code below:<br>
+<textarea id=AssemblyProgram></textarea><p>
+<input id=assemble_point type=text value="0000"><input type=button value=Assemble onclick="Assemble();window.advancedcheck=false;"><div id=execution><button onclick=exec(0)>Execute<br>All at once</button><button onclick=exec(1)>Execute<br>Step by step</button></div><div hidden=true id=stepoption><Button onclick=execstep();>Next Step</button><button onclick=finishStep(1);>Stop</button>
+<table border=1 cellpadding=5>
+<tbody>
+<tr><th colspan=4>Execution Record</th></tr>
+<tr><td>line No.</td><td>Memory Address</td><td>Instruction</td><td>Operator</td></tr>
+<tr><td id=lineNo>--</td><td id=MemAddr>--</td><td id=Instr>--</td><td id=Operator>--</td></tr>
+</tbody>
+</table>
+</div><p>
+<Table border=2 cellpadding=5>
+<TH colspan=4>8085 Microprocessor</TH>
+<tr><td align=center><input type=button value=Register onclick=registerTableVisible()></td><td align=center><input type=button value=Memory onclick=memoryTableVisible()></td><td align=center><input type=button value="I/O Devices" onclick=iodevicesTableVisible()></td><td><input type=button value="All" onclick=allTableVisible()></td></tr>
+<tr id=registerTable><td colspan=4><table cellpadding=10>
+<TH>Registers : </TH>
+<tr><td><table cellpadding=5 border=1>
+<tr><td>Register</td><td>Value</td><td>7</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td><td>0</td></tr>
+<tr><td>Accumulator</td><td id=valueA>00</td><td id=A7>0</td><td id=A6>0</td><td id=A5>0</td><td id=A4>0</td><td id=A3>0</td><td id=A2>0</td><td id=A1>0</td><td id=A0>0</td></tr>
+<tr><td>Register B</td><td id=valueB>00</td><td id=B7>0</td><td id=B6>0</td><td id=B5>0</td><td id=B4>0</td><td id=B3>0</td><td id=B2>0</td><td id=B1>0</td><td id=B0>0</td></tr>
+<tr><td>Register C</td><td id=valueC>00</td><td id=C7>0</td><td id=C6>0</td><td id=C5>0</td><td id=C4>0</td><td id=C3>0</td><td id=C2>0</td><td id=C1>0</td><td id=C0>0</td></tr>
+<tr><td>Register D</td><td id=valueD>00</td><td id=D7>0</td><td id=D6>0</td><td id=D5>0</td><td id=D4>0</td><td id=D3>0</td><td id=D2>0</td><td id=D1>0</td><td id=D0>0</td></tr>
+<tr><td>Register E</td><td id=valueE>00</td><td id=E7>0</td><td id=E6>0</td><td id=E5>0</td><td id=E4>0</td><td id=E3>0</td><td id=E2>0</td><td id=E1>0</td><td id=E0>0</td></tr>
+<tr><td>Register H</td><td id=valueH>00</td><td id=H7>0</td><td id=H6>0</td><td id=H5>0</td><td id=H4>0</td><td id=H3>0</td><td id=H2>0</td><td id=H1>0</td><td id=H0>0</td></tr>
+<tr><td>Register L</td><td id=valueL>00</td><td id=L7>0</td><td id=L6>0</td><td id=L5>0</td><td id=L4>0</td><td id=L3>0</td><td id=L2>0</td><td id=L1>0</td><td id=L0>0</td></tr>
+<tr><td>Memory(M)</td><td id=valueM>00</td><td id=M7>0</td><td id=M6>0</td><td id=M5>0</td><td id=M4>0</td><td id=M3>0</td><td id=M2>0</td><td id=M1>0</td><td id=M0>0</td></tr>
+</table></td></tr>
+<tr><td><table border=1 cellpadding=5>
+<tr><td>Register</td><td>Value</td><td>S</td><td>Z</td><td>*</td><td>AC</td><td>*</td><td>P</td><td>*</td><td>CY</td></tr>
+<tr><td>Flag Register</td><td id=flag>00</td><td id=flagS>0</td><td id=flagZ>0</td><td>0</td><td id=flagAC>0</td><td>0</td><td id=flagP>0</td><td>0</td><td id=flagCY>0</td></tr>
+</table></td></tr>
+<tr><td><table border=1>
+<tr><td>Type</td><td>Value</td></tr>
+<tr><td>Stack Pointer(SP)</td><td id=stackPointer>0000</td></tr>
+<tr><td>Memory Pointer(HL)</td><td>0000</td></tr>
+<tr><td>Program Status Word(PSW)</td><td id=PSW>0000</td></tr>
+<tr><td>Program Counter(PC)</td><td>0000</td></tr>
+<tr><td>Clock Cycle Counter</td><td>0</td></tr>
+<tr><td>Instruction Counter</td><td>0</td></tr>
+</table></td></tr>
+<tr><td><table border=1>
+<tr><td>SOD</td><td>SID</td><td>INTR</td><td>TRAP</td><td>R7.5</td><td>R6.5</td><td>R5.5</td></tr>
+<tr><td id=SOD>0</td><td id=SID onclick=toggle(this)>0</td><td id=INTR onclick=toggle(this)>0</td><td id=TRAP onclick=toggle(this)>0</td><td id=R7_5 onclick=toggle(this)>0</td><td id=R6_5 onclick=toggle(this)>0</td><td id=R5_5 onclick=toggle(this)>0</td></tr>
+</table></td></tr>
+<tr><td>For SIM instruction <table border=1>
+<tr><td>SOD</td><td>SDE</td><td>*</td><td>R7.5</td><td>MSE</td><td>M7.5</td><td>M6.5</td><td>M5.5</td></tr>
+<tr><td id=SIMSOD>0</td><td id=SIMSDE>0</td><td>0</td><td id=SIMR7_5>0</td><td id=SIMMSE>0</td><td id=SIMM7_5>0</td><td id=SIMM6_5>0</td><td id=SIMM5_5>0</td></tr>
+</table></td></tr>
+<tr><td>For RIM instruction <table border=1>
+<tr><td>SID</td><td>17.5</td><td>16.5</td><td>15.5</td><td>IE</td><td>M7.5</td><td>M6.5</td><td>M5.5</td></tr>
+<tr><td id=RIMSID>0</td><td id=RIM17.5>0</td><td id=RIM16.5>0</td><td id=RIM15.5>0</td><td id=RIMIE>0</td><td id=RIMM7.5>0</td><td id=RIMM6.5>0</td><td id=RIMM5.5>0</td></tr>
+</table></td></tr>
+<tr><td><span color=blue>No. Conversion Tool:</span><table border=1>
+<tr><td>Hexadecimal</td><td>Decimal</td><td>Binary</td></tr>
+<tr><td><input id=converterHex type=text value=0000></td><td><input id=converterDec type=number value=0></td><td><input id=converterBin type=number value=00000000></td></tr>
+</table></td></tr>
+</table></td></tr>
+
+<tr id=memoryTable hidden=true align=center><td colspan=4><table  cellpadding=5>
+<tr><th colspan=2>Memory</th></tr>
+<tr><td colspan=2 align=center><table id=selectedMemory border=1 cellpadding=5>
+<tr><th>Memory Address</th><th>Value</th></tr>
+</table></td></tr>
+<tr><td align=center><input type=button value="store into memory" onclick=strMem()></td><td align=center><input type=button value="clear memory" onclick=clrMem()></td></tr>
+</table></td></tr>
+
+<tr id=IOTable hidden=true><td colspan=4><table border=1 cellpadding=5>
+<th colspan=17>I/O Devices</th>
+<tr><td></td><td class=grey>0</td><td class=grey>1</td><td class=grey>2</td><td class=grey>3</td><td class=grey>4</td><td class=grey>5</td><td class=grey>6</td><td class=grey>7</td><td class=grey>8</td><td class=grey>9</td><td class=grey>A</td><td class=grey>B</td><td class=grey>C</td><td class=grey>D</td><td class=grey>E</td><td class=grey>F</td></tr>
+<tr><td class=grey>00</td><td id=io00>00</td><td id=io01>00</td><td id=io02>00</td><td id=io03>00</td><td id=io04>00</td><td id=io05>00</td><td id=io06>00</td><td id=io07>00</td><td id=io08>00</td><td id=io09>00</td><td id=io0A>00</td><td id=io0B>00</td><td id=io0C>00</td><td id=io0D>00</td><td id=io0E>00</td><td id=io0F>00</td></tr>
+<tr><td class=grey>10</td><td id=io10>00</td><td id=io11>00</td><td id=io12>00</td><td id=io13>00</td><td id=io14>00</td><td id=io15>00</td><td id=io16>00</td><td id=io17>00</td><td id=io18>00</td><td id=io19>00</td><td id=io1A>00</td><td id=io1B>00</td><td id=io1C>00</td><td id=io1D>00</td><td id=io1E>00</td><td id=io1F>00</td></tr>
+<tr><td class=grey>20</td><td id=io20>00</td><td id=io21>00</td><td id=io22>00</td><td id=io23>00</td><td id=io24>00</td><td id=io25>00</td><td id=io26>00</td><td id=io27>00</td><td id=io28>00</td><td id=io29>00</td><td id=io2A>00</td><td id=io2B>00</td><td id=io2C>00</td><td id=io2D>00</td><td id=io2E>00</td><td id=io2F>00</td></tr>
+<tr><td class=grey>30</td><td id=io30>00</td><td id=io31>00</td><td id=io32>00</td><td id=io33>00</td><td id=io34>00</td><td id=io35>00</td><td id=io36>00</td><td id=io37>00</td><td id=io38>00</td><td id=io39>00</td><td id=io3A>00</td><td id=io3B>00</td><td id=io3C>00</td><td id=io3D>00</td><td id=io3E>00</td><td id=io3F>00</td></tr>
+<tr><td class=grey>40</td><td id=io40>00</td><td id=io41>00</td><td id=io42>00</td><td id=io43>00</td><td id=io44>00</td><td id=io45>00</td><td id=io46>00</td><td id=io47>00</td><td id=io48>00</td><td id=io49>00</td><td id=io4A>00</td><td id=io4B>00</td><td id=io4C>00</td><td id=io4D>00</td><td id=io4E>00</td><td id=io4F>00</td></tr>
+<tr><td class=grey>50</td><td id=io50>00</td><td id=io51>00</td><td id=io52>00</td><td id=io53>00</td><td id=io54>00</td><td id=io55>00</td><td id=io56>00</td><td id=io57>00</td><td id=io58>00</td><td id=io59>00</td><td id=io5A>00</td><td id=io5B>00</td><td id=io5C>00</td><td id=io5D>00</td><td id=io5E>00</td><td id=io5F>00</td></tr>
+<tr><td class=grey>60</td><td id=io60>00</td><td id=io61>00</td><td id=io62>00</td><td id=io63>00</td><td id=io64>00</td><td id=io65>00</td><td id=io66>00</td><td id=io67>00</td><td id=io68>00</td><td id=io69>00</td><td id=io6A>00</td><td id=io6B>00</td><td id=io6C>00</td><td id=io6D>00</td><td id=io6E>00</td><td id=io6F>00</td></tr>
+<tr><td class=grey>70</td><td id=io70>00</td><td id=io71>00</td><td id=io72>00</td><td id=io73>00</td><td id=io74>00</td><td id=io75>00</td><td id=io76>00</td><td id=io77>00</td><td id=io78>00</td><td id=io79>00</td><td id=io7A>00</td><td id=io7B>00</td><td id=io7C>00</td><td id=io7D>00</td><td id=io7E>00</td><td id=io7F>00</td></tr>
+<tr><td class=grey>80</td><td id=io80>00</td><td id=io81>00</td><td id=io82>00</td><td id=io83>00</td><td id=io84>00</td><td id=io85>00</td><td id=io86>00</td><td id=io87>00</td><td id=io88>00</td><td id=io89>00</td><td id=io8A>00</td><td id=io8B>00</td><td id=io8C>00</td><td id=io8D>00</td><td id=io8E>00</td><td id=io8F>00</td></tr>
+<tr><td class=grey>90</td><td id=io90>00</td><td id=io91>00</td><td id=io92>00</td><td id=io93>00</td><td id=io94>00</td><td id=io95>00</td><td id=io96>00</td><td id=io97>00</td><td id=io98>00</td><td id=io99>00</td><td id=io9A>00</td><td id=io9B>00</td><td id=io9C>00</td><td id=io9D>00</td><td id=io9E>00</td><td id=io9F>00</td></tr>
+<tr><td class=grey>A0</td><td id=ioA0>00</td><td id=ioA1>00</td><td id=ioA2>00</td><td id=ioA3>00</td><td id=ioA4>00</td><td id=ioA5>00</td><td id=ioA6>00</td><td id=ioA7>00</td><td id=ioA8>00</td><td id=ioA9>00</td><td id=ioAA>00</td><td id=ioAB>00</td><td id=ioAC>00</td><td id=ioAD>00</td><td id=ioAE>00</td><td id=ioAF>00</td></tr>
+<tr><td class=grey>B0</td><td id=ioB0>00</td><td id=ioB1>00</td><td id=ioB2>00</td><td id=ioB3>00</td><td id=ioB4>00</td><td id=ioB5>00</td><td id=ioB6>00</td><td id=ioB7>00</td><td id=ioB8>00</td><td id=ioB9>00</td><td id=ioBA>00</td><td id=ioBB>00</td><td id=ioBC>00</td><td id=ioBD>00</td><td id=ioBE>00</td><td id=ioBF>00</td></tr>
+<tr><td class=grey>C0</td><td id=ioC0>00</td><td id=ioC1>00</td><td id=ioC2>00</td><td id=ioC3>00</td><td id=ioC4>00</td><td id=ioC5>00</td><td id=ioC6>00</td><td id=ioC7>00</td><td id=ioC8>00</td><td id=ioC9>00</td><td id=ioCA>00</td><td id=ioCB>00</td><td id=ioCC>00</td><td id=ioCD>00</td><td id=ioCE>00</td><td id=ioCF>00</td></tr>
+<tr><td class=grey>D0</td><td id=ioD0>00</td><td id=ioD1>00</td><td id=ioD2>00</td><td id=ioD3>00</td><td id=ioD4>00</td><td id=ioD5>00</td><td id=ioD6>00</td><td id=ioD7>00</td><td id=ioD8>00</td><td id=ioD9>00</td><td id=ioDA>00</td><td id=ioDB>00</td><td id=ioDC>00</td><td id=ioDD>00</td><td id=ioDE>00</td><td id=ioDF>00</td></tr>
+<tr><td class=grey>E0</td><td id=ioE0>00</td><td id=ioE1>00</td><td id=ioE2>00</td><td id=ioE3>00</td><td id=ioE4>00</td><td id=ioE5>00</td><td id=ioE6>00</td><td id=ioE7>00</td><td id=ioE8>00</td><td id=ioE9>00</td><td id=ioEA>00</td><td id=ioEB>00</td><td id=ioEC>00</td><td id=ioED>00</td><td id=ioEE>00</td><td id=ioEF>00</td></tr>
+<tr><td class=grey>F0</td><td id=ioF0>00</td><td id=ioF1>00</td><td id=ioF2>00</td><td id=ioF3>00</td><td id=ioF4>00</td><td id=ioF5>00</td><td id=ioF6>00</td><td id=ioF7>00</td><td id=ioF8>00</td><td id=ioF9>00</td><td id=ioFA>00</td><td id=ioFB>00</td><td id=ioFC>00</td><td id=ioFD>00</td><td id=ioFE>00</td><td id=ioFF>00</td></tr>
+</table></td></tr>
+</Table>
+</body>
+</html>
