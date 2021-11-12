@@ -1,3 +1,22 @@
 .grey{
   background-color: #606060;
 }
+*{
+	margin:auto;
+}
+body{
+	display:flex;
+	flex-direction:cloumn;
+	background:red;
+}
+body>div:first-child{
+	flex-grow:1;
+}
+body>div:nth-child(2){
+	background:white;
+	padding-left:8px;
+	padding-right:8px;
+}
+body>div:last-child{
+	flex-grow:1;
+}
